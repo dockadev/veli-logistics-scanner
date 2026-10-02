@@ -1,0 +1,48 @@
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+node_modules/
+dist/
+dist-ssr/
+*.local
+*.tsbuildinfo
+
+src-tauri/target/
+src-tauri/gen/
+_egui_backup/
+
+# Editor & OS
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+Thumbs.db
+*.sw?
+*.suo
+*.user
+
+# Environment Variables
+# VITE_* değişkenleri build-time'da JS bundle'a düz metin gömülür; gerçek
+# değerler repoya girmesin. CI bunları Actions secret'larından üretir.
+.env
+.env.local
+.env.*.local
+.env.development
+.env.production
+.env.test
+!.env.example
+
+# Backups & Scratch
+*_backup/
+*_backup.json
+*.backup
+*.bak
+_trash/
+
+# Local Agent Workspace Data
+.agents/
+.commandcode/
