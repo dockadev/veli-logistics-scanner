@@ -42,6 +42,10 @@ Thumbs.db
 *.backup
 *.bak
 _trash/
+*.backup.json
+
+# PowerShell/cmd kaynakli bozuk dosya adlari ("dosya.json;" gibi)
+*.*;
 
 # Local Agent Workspace Data
 .agents/
