@@ -18,10 +18,13 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 
 [profile.release]
+# `opt-level = "s"` korunuyor. Ölçüldü: `3` ile derleme yalnızca 16 saniye
+# (1m30s -> 1m14s) hızlanırken exe 3.75 MB'tan 4.95 MB'a çıkıyordu
+# (+%32). Kullanıcıya giden dosya için bu takas değerine göre kötü.
 opt-level = "s"
-# Tam LTO yerine `thin`: ince LTO çok çekirdekli derlemeyi bozmaz, exe'yi
-# belirgin büyütmeye de zorlamaz. `codegen-units` bilinçli olarak varsayılan
-# bırakıldı — 1 yapmak runner'ın işlemcilerini boşa çıkarıyordu.
+# Tam LTO yerine `thin`: ince LTO cok cekirdekli derlemeyi bozmaz, exe'yi
+# belirgin buyutmeye de zorlamaz. `codegen-units` bilinçli olarak varsayilan
+# birakildi — 1 yapmak runner'in islemcilerini bosa cikariyordu.
 lto = "thin"
 strip = true
 panic = "abort"

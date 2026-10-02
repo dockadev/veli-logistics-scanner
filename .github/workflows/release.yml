@@ -1,8 +1,8 @@
 name: Release
 
-# Testler master'a her push'ta koşar; exe yalnızca `v*` etiketi
-# push edildiğinde derlenir. Böylece etiket derlemesi Rust bağımlılık
-# ağacını bir kez (release profiliyle) derler, iki kez değil.
+# Testler master'a her push'ta ve PR'da koşar; exe yalnızca `v*` etiketi
+# push edildiğinde (ya da elle tetiklemede) derlenir. Böylece etiket
+# derlemesi Rust bagimlilik agacini bir kez release profiliyle derler.
 on:
   push:
     branches:
@@ -17,6 +17,11 @@ on:
 permissions:
   contents: write
 
+env:
+  # Actions, Node.js 20'yi desteklemeyi birakip Node 24'e zorluyor; eski
+  # major'da kalmak yerine dogrudan 24'e gecip uyariyi da kaldiriyoruz.
+  NODE_VERSION: '24'
+
 jobs:
   test:
     name: Test
@@ -28,7 +33,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: ${{ env.NODE_VERSION }}
           cache: npm
 
       - name: Setup Rust
@@ -72,7 +77,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: ${{ env.NODE_VERSION }}
           cache: npm
 
       - name: Setup Rust
@@ -134,9 +139,9 @@ jobs:
           New-Item -ItemType Directory -Force -Path $outdir | Out-Null
           Copy-Item $exe -Destination $outdir
 
-          # Kullaniciya gosterilecek ad: surum numarali, bosluksuz.
+          # Kullaniciya gosterilecek ad: urun adi + surum, bosluksuz.
           $version = (Get-Content package.json | ConvertFrom-Json).version
-          Rename-Item "$outdir\veli-scanner.exe" "VELI-Logistics-Tarayici-$version.exe"
+          Rename-Item "$outdir\veli-scanner.exe" "Veli-Logistics-Tracker-$version.exe"
 
           Get-ChildItem $outdir | Select-Object Name, Length
 
