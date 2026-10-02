@@ -72,8 +72,9 @@ cargo test --manifest-path src-tauri/Cargo.toml  # parser tests
 npm run tauri build -- --no-bundle --ci
 ```
 
-This produces `src-tauri/target/release/veli-scanner.exe`. No installer is
-produced; the exe is downloaded and run directly.
+This produces `src-tauri/target/release/veli-scanner.exe`, which CI renames to
+`Veli-Logistics-Tracker-<version>.exe`. No installer is produced; the exe is
+downloaded and run directly.
 
 ## GitHub Actions
 
