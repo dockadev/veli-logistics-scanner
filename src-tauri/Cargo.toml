@@ -19,7 +19,9 @@ serde_json = "1"
 
 [profile.release]
 opt-level = "s"
-lto = true
+# Tam LTO yerine `thin`: ince LTO çok çekirdekli derlemeyi bozmaz, exe'yi
+# belirgin büyütmeye de zorlamaz. `codegen-units` bilinçli olarak varsayılan
+# bırakıldı — 1 yapmak runner'ın işlemcilerini boşa çıkarıyordu.
+lto = "thin"
 strip = true
-codegen-units = 1
 panic = "abort"

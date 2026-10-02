@@ -1,21 +1,26 @@
 name: Release
 
-# Etiket (v1.0.0 gibi) push edildiğinde tetiklenir.
-# Elle tetiklemek için: Actions > Release > Run workflow
+# Testler master'a her push'ta koşar; exe yalnızca `v*` etiketi
+# push edildiğinde derlenir. Böylece etiket derlemesi Rust bağımlılık
+# ağacını bir kez (release profiliyle) derler, iki kez değil.
 on:
   push:
+    branches:
+      - master
     tags:
       - 'v*'
+  pull_request:
+    branches:
+      - master
   workflow_dispatch:
 
 permissions:
   contents: write
 
 jobs:
-  build:
-    name: Build Windows portable exe
+  test:
+    name: Test
     runs-on: windows-latest
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -41,6 +46,48 @@ jobs:
           # atlar ve Vite/Tailwind kurulu olmaz.
           NODE_ENV: development
 
+      - name: Run Rust tests
+        working-directory: src-tauri
+        run: cargo test --locked
+
+      # Supabase değerleri burada gerekmez: `npm run build` eksik
+      # VITE_* değerleriyle de geçer, `isSupabaseConfigured` false döner ve
+      # istemci null kalır. Gerçek değerler yalnızca exe'ye gömülürken lazım.
+      - name: Type-check and build frontend
+        run: npm run build
+
+  build:
+    name: Build Windows portable exe
+    runs-on: windows-latest
+
+    # master'a push ve PR'lerde yalnızca test koşar; exe derlemesi yalnızca
+    # `v*` etiketiyle (veya elle tetiklemede) yapılır. Koşulsuz çalıştırılsaydı
+    # her push'ta gereksiz yere tam derleme yapılırdı.
+    if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust build
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: 'src-tauri -> target'
+
+      - name: Install frontend dependencies
+        run: npm ci --include=dev
+        env:
+          NODE_ENV: development
+
       - name: Write .env from secrets
         shell: pwsh
         env:
@@ -56,13 +103,6 @@ jobs:
           }
           "VITE_SUPABASE_URL=$env:SUPABASE_URL" | Out-File -FilePath ".env" -Encoding utf8
           "VITE_SUPABASE_ANON_KEY=$env:SUPABASE_ANON_KEY" | Out-File -FilePath ".env" -Encoding utf8 -Append
-
-      - name: Run Rust tests
-        working-directory: src-tauri
-        run: cargo test --locked
-
-      - name: Type-check and build frontend
-        run: npm run build
 
       # Tauri, `npm run tauri build` içinde `beforeBuildCommand` olarak
       # `npm run build`'i zaten çalıştırır; bu yüzden tekrarlanmıyor.
@@ -103,7 +143,10 @@ jobs:
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: veli-scanner-windows
+          # Etiket adıyla adlandırılır: run içinde birden fazla artifact
+          # biriktirilirse (elle tetikleme, yeniden deneme) aynı isim çakışır
+          # ve action hata verir.
+          name: veli-scanner-windows-${{ github.ref_name }}
           path: artifacts/*
           retention-days: 30
 
