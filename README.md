@@ -112,6 +112,11 @@ against the server before writing.
 A service role key or any other secret must not be placed in `.env`; `.env` is
 gitignored.
 
+Depot approvals are not automatic: a new depot is written with
+`isIntegrated: false` and only appears on the site after a logistics officer
+approves it from the web panel. Rescanning an approved depot keeps its
+approval, subregion and access code intact — only the stock figures move.
+
 ## License
 
 Private use.
