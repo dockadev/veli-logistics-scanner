@@ -13,7 +13,7 @@ permissions:
 
 jobs:
   build:
-    name: Build Windows installer
+    name: Build Windows portable exe
     runs-on: windows-latest
 
     steps:
@@ -66,22 +66,37 @@ jobs:
 
       # Tauri, `npm run tauri build` içinde `beforeBuildCommand` olarak
       # `npm run build`'i zaten çalıştırır; bu yüzden tekrarlanmıyor.
-      - name: Build Tauri bundle
-        run: npm run tauri build
+      - name: Build portable exe
+        # --no-bundle: NSIS/MSI uretmez, yalnizca exe'yi birakir.
+        # --ci: deger soran istemleri kapatir, action log'ta takilir.
+        run: npm run tauri build -- --no-bundle --ci
 
       - name: Collect artifacts
         shell: pwsh
         run: |
-          $version = (Get-Content package.json | ConvertFrom-Json).version
+          # Yalnızca taşınabilir exe. NSIS kurulum sihirbazı üretilmiyor:
+          # kullanıcı indirip çift tıklar, kurulum adımı yok.
+          # Bu blok yine de NSIS'e düşerse işi durdur — kullanıcı yanlış
+          # dosyayı indirip "kurulum gerekiyor" sanmasın.
+          $nsis = Get-ChildItem "src-tauri\target\release\bundle\nsis\*.exe" -ErrorAction SilentlyContinue
+          if ($nsis) {
+            Write-Error "NSIS kurulum dosyasi uretildi, bu istenmiyor: $($nsis.Name)"
+            exit 1
+          }
+
+          $exe = "src-tauri\target\release\veli-scanner.exe"
+          if (-not (Test-Path $exe)) {
+            Write-Error "Derlenen exe bulunamadi: $exe"
+            exit 1
+          }
+
           $outdir = "artifacts"
           New-Item -ItemType Directory -Force -Path $outdir | Out-Null
+          Copy-Item $exe -Destination $outdir
 
-          # NSIS kurulum dosyası
-          Get-ChildItem "src-tauri\target\release\bundle\nsis\*.exe" |
-            ForEach-Object { Copy-Item $_.FullName -Destination $outdir }
-
-          # Taşınabilir exe
-          Copy-Item "src-tauri\target\release\veli-scanner.exe" -Destination $outdir
+          # Kullaniciya gosterilecek ad: surum numarali, bosluksuz.
+          $version = (Get-Content package.json | ConvertFrom-Json).version
+          Rename-Item "$outdir\veli-scanner.exe" "VELI-Logistics-Tarayici-$version.exe"
 
           Get-ChildItem $outdir | Select-Object Name, Length
 
