@@ -84,218 +84,247 @@ input {
   outline-offset: 2px;
 }
 
-/* Sayı, kod, metrik */
-.num {
-  font-family: var(--font-num);
-  font-variant-numeric: tabular-nums;
-  font-weight: 600;
-}
+/*
+ * Bileşen sınıfları `components` katmanına alınır.
+ *
+ * Tailwind v4 `@import "tailwindcss"` ile katman sırasını
+ * `theme, base, components, utilities` olarak tanımlar. Katmansız (unlayered)
+ * CSS her zaman katmanlı CSS'i yener; yani `.field { padding: 0 12px }`
+ * katmansız yazıldığında `pl-9` (padding-left: 36px) uygulanmaz ve ikon
+ * placeholder metninin üstüne biner. `components` katmanına alınınca
+ * `utilities` katmanı kazanır.
+ */
+@layer components {
+  /* Sayı, kod, metrik */
+  .num {
+    font-family: var(--font-num);
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+  }
 
-.mono {
-  font-family: var(--font-mono);
-}
+  .mono {
+    font-family: var(--font-mono);
+  }
 
-/* Bileşen tipografisi */
-.label {
-  font-size: 11px;
-  line-height: 1;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--text-muted);
-}
+  /* Bileşen tipografisi */
+  .label {
+    font-size: 11px;
+    line-height: 1;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+  }
 
-/* Cam yüzey */
-.panel {
-  background: var(--bg-panel);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  backdrop-filter: blur(12px);
-}
+  /* Cam yüzey */
+  .panel {
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    backdrop-filter: blur(12px);
+  }
 
-/* Yuvalanmış panel — içte blur tekrarlanırsa artefakt üretir */
-.panel .panel {
-  backdrop-filter: none;
-  background: rgba(255, 255, 255, 0.03);
-}
+  /* Yuvalanmış panel — içte blur tekrarlanırsa artefakt üretir */
+  .panel .panel {
+    backdrop-filter: none;
+    background: rgba(255, 255, 255, 0.03);
+  }
 
-.panel-hover {
-  transition:
-    border-color 0.22s ease,
-    background-color 0.22s ease,
-    box-shadow 0.22s ease;
-}
+  .panel-hover {
+    transition:
+      border-color 0.22s ease,
+      background-color 0.22s ease,
+      box-shadow 0.22s ease;
+  }
 
-.panel-hover:hover {
-  border-color: var(--border-strong);
-  background: rgba(255, 255, 255, 0.035);
-}
+  .panel-hover:hover {
+    border-color: var(--border-strong);
+    background: rgba(255, 255, 255, 0.035);
+  }
 
-.row {
-  transition: background-color 0.16s ease;
-}
+  .row {
+    transition: background-color 0.16s ease;
+  }
 
-.row:hover {
-  background: rgba(255, 255, 255, 0.03);
-}
+  .row:hover {
+    background: rgba(255, 255, 255, 0.03);
+  }
 
-/* Input */
-.field {
-  height: 40px;
-  width: 100%;
-  border-radius: var(--radius);
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid var(--border);
-  color: var(--text);
-  font-family: inherit;
-  font-size: 13.5px;
-  padding: 0 12px;
-  transition:
-    border-color 0.2s ease,
-    background-color 0.2s ease,
-    box-shadow 0.2s ease;
-}
+  /* Input */
+  .field {
+    height: 40px;
+    width: 100%;
+    border-radius: var(--radius);
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: inherit;
+    font-size: 13.5px;
+    /* Kısayol yerine ayrı ayrı: `pl-9` gibi utility sınıflarının
+       çalışması için padding-left bağımsız yazılmalı. */
+    padding-top: 0;
+    padding-right: 12px;
+    padding-bottom: 0;
+    padding-left: 12px;
+    transition:
+      border-color 0.2s ease,
+      background-color 0.2s ease,
+      box-shadow 0.2s ease;
+  }
 
-.field::placeholder {
-  color: var(--text-dim);
-}
+  .field::placeholder {
+    color: var(--text-dim);
+  }
 
-.field:hover:not(:disabled) {
-  border-color: var(--border-strong);
-  background: rgba(255, 255, 255, 0.05);
-}
+  .field:hover:not(:disabled) {
+    border-color: var(--border-strong);
+    background: rgba(255, 255, 255, 0.05);
+  }
 
-.field:focus {
-  border-color: var(--accent-line);
-  background: rgba(255, 255, 255, 0.05);
-  box-shadow: 0 0 0 3px var(--accent-soft);
-  outline: none;
-}
+  .field:focus {
+    border-color: var(--accent-line);
+    background: rgba(255, 255, 255, 0.05);
+    box-shadow: 0 0 0 3px var(--accent-soft);
+    outline: none;
+  }
 
-.field:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
+  .field:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
 
-/* Butonlar */
-.btn-primary {
-  display: inline-flex;
-  height: 44px;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 0 16px;
-  border: none;
-  border-radius: var(--radius);
-  background: var(--accent);
-  color: #06231a;
-  font-size: 13.5px;
-  font-weight: 600;
-  white-space: nowrap;
-  cursor: pointer;
-  transition:
-    filter 0.2s ease,
-    box-shadow 0.2s ease,
-    transform 0.12s ease;
-}
+  /*
+   * WebView2'nin kayıtlı parola önerisi kutusu. Tarayıcı parola yöneticisi
+   * masaüstü uygulamasında istenen davranış değil; bu alanları gizliyoruz.
+   */
+  .field:-webkit-autofill,
+  .field:-webkit-autofill:hover,
+  .field:-webkit-autofill:focus {
+    -webkit-text-fill-color: var(--text);
+    -webkit-box-shadow: 0 0 0 1000px transparent inset;
+    transition: background-color 9999s ease-out 0s;
+  }
 
-.btn-primary:hover:not(:disabled) {
-  filter: brightness(1.1);
-  box-shadow: 0 10px 26px -10px var(--accent-glow);
-}
+  /* Butonlar */
+  .btn-primary {
+    display: inline-flex;
+    height: 44px;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 0 16px;
+    border: none;
+    border-radius: var(--radius);
+    background: var(--accent);
+    color: #06231a;
+    font-size: 13.5px;
+    font-weight: 600;
+    white-space: nowrap;
+    cursor: pointer;
+    transition:
+      filter 0.2s ease,
+      box-shadow 0.2s ease,
+      transform 0.12s ease;
+  }
 
-.btn-primary:active:not(:disabled) {
-  transform: scale(0.985);
-}
+  .btn-primary:hover:not(:disabled) {
+    filter: brightness(1.1);
+    box-shadow: 0 10px 26px -10px var(--accent-glow);
+  }
 
-.btn-primary:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
+  .btn-primary:active:not(:disabled) {
+    transform: scale(0.985);
+  }
 
-.btn-secondary {
-  display: inline-flex;
-  height: 44px;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 0 16px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: rgba(255, 255, 255, 0.03);
-  color: var(--text);
-  font-family: inherit;
-  font-size: 13.5px;
-  font-weight: 500;
-  white-space: nowrap;
-  cursor: pointer;
-  transition:
-    border-color 0.18s ease,
-    background-color 0.18s ease,
-    color 0.18s ease;
-}
+  .btn-primary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
 
-.btn-secondary:hover:not(:disabled) {
-  border-color: var(--border-strong);
-  background: rgba(255, 255, 255, 0.06);
-}
+  .btn-secondary {
+    display: inline-flex;
+    height: 44px;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 0 16px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: rgba(255, 255, 255, 0.03);
+    color: var(--text);
+    font-family: inherit;
+    font-size: 13.5px;
+    font-weight: 500;
+    white-space: nowrap;
+    cursor: pointer;
+    transition:
+      border-color 0.18s ease,
+      background-color 0.18s ease,
+      color 0.18s ease;
+  }
 
-.btn-secondary:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
-}
+  .btn-secondary:hover:not(:disabled) {
+    border-color: var(--border-strong);
+    background: rgba(255, 255, 255, 0.06);
+  }
 
-.btn-ghost {
-  display: inline-flex;
-  height: 32px;
-  align-items: center;
-  gap: 6px;
-  padding: 0 10px;
-  border: 1px solid transparent;
-  border-radius: 6px;
-  background: transparent;
-  color: var(--text-dim);
-  font-family: inherit;
-  font-size: 12px;
-  cursor: pointer;
-  transition:
-    border-color 0.16s ease,
-    background-color 0.16s ease,
-    color 0.16s ease;
-}
+  .btn-secondary:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
 
-.btn-ghost:hover {
-  border-color: var(--border);
-  background: rgba(255, 255, 255, 0.05);
-  color: var(--text);
-}
+  .btn-ghost {
+    display: inline-flex;
+    height: 32px;
+    align-items: center;
+    gap: 6px;
+    padding: 0 10px;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--text-dim);
+    font-family: inherit;
+    font-size: 12px;
+    cursor: pointer;
+    transition:
+      border-color 0.16s ease,
+      background-color 0.16s ease,
+      color 0.16s ease;
+  }
 
-/* Uyarı kutuları */
-.notice {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  padding: 10px 12px;
-  border-radius: 6px;
-  font-size: 11.5px;
-  line-height: 1.5;
-}
+  .btn-ghost:hover {
+    border-color: var(--border);
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text);
+  }
 
-.notice-danger {
-  border: 1px solid var(--danger-line);
-  background: var(--danger-soft);
-  color: var(--danger);
-}
+  /* Uyarı kutuları */
+  .notice {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 10px 12px;
+    border-radius: 6px;
+    font-size: 11.5px;
+    line-height: 1.5;
+  }
 
-.notice-warn {
-  border: 1px solid var(--warn-line);
-  background: var(--warn-soft);
-  color: var(--warn);
-}
+  .notice-danger {
+    border: 1px solid var(--danger-line);
+    background: var(--danger-soft);
+    color: var(--danger);
+  }
 
-.notice-accent {
-  border: 1px solid var(--accent-line);
-  background: var(--accent-soft);
-  color: var(--accent);
+  .notice-warn {
+    border: 1px solid var(--warn-line);
+    background: var(--warn-soft);
+    color: var(--warn);
+  }
+
+  .notice-accent {
+    border: 1px solid var(--accent-line);
+    background: var(--accent-soft);
+    color: var(--accent);
+  }
 }
 
 /* VELI rozeti */

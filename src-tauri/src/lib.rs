@@ -30,6 +30,10 @@ pub struct ItemOut {
 pub struct DepotOut {
   pub location: String,
   pub region: String,
+  /// "Storage Depot" / "Seaport" / "Aircraft Depot"
+  pub subregion: String,
+  /// Oyun etiketi: "VELI-ASH-C".
+  pub tag: String,
   pub items: Vec<ItemOut>,
 }
 
@@ -138,6 +142,8 @@ fn parse_save_file(bytes: Vec<u8>) -> Result<ParseResult, String> {
     .map(|depot| DepotOut {
       location: depot.location,
       region: depot.region,
+      subregion: depot.subregion,
+      tag: depot.tag,
       items: depot
         .current
         .into_iter()
@@ -165,6 +171,9 @@ fn parse_save_file(bytes: Vec<u8>) -> Result<ParseResult, String> {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+  // `devtools(true)` hiçbir yerde çağrılmıyor; pencere `tauri.conf.json`'da
+  // varsayılan `false` ile açılır. Böylece F12 ve sağ tık "Inspect"
+  // debug derlemede de çalışmaz.
   tauri::Builder::default()
     .invoke_handler(tauri::generate_handler![
       find_save_files,

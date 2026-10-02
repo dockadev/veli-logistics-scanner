@@ -20,10 +20,42 @@ impl std::fmt::Display for SavError {
 
 #[derive(Debug, Clone)]
 pub struct Stockpile {
-    pub location: String,
-    pub region: String,
-    /// (oyun codename'i, kutu mu) -> adet. Ekrana ad çevirisi veri katmanında yapılır.
-    pub items: BTreeMap<(String, bool), i64>,
+  pub location: String,
+  pub region: String,
+  /// Kararlı tür kimliği: "storage" / "seaport" / "aircraft".
+  pub subregion: String,
+  /// Oyun etiketi: "VELI-ASH-C".
+  pub tag: String,
+  /// (oyun codename'i, kutu mu) -> adet. Ekrana ad çevirisi veri katmanında yapılır.
+  pub items: BTreeMap<(String, bool), i64>,
+}
+
+/// Depo türü. Oyun `CodeName` alanından belirlenir; görünen ad çevirisi
+/// frontend sözlüğünde yapılır, burada yalnızca kararlı bir kimlik döner.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum StructureKind {
+  Storage,
+  Seaport,
+  Aircraft,
+}
+
+impl StructureKind {
+  pub fn as_str(self) -> &'static str {
+    match self {
+      StructureKind::Storage => "storage",
+      StructureKind::Seaport => "seaport",
+      StructureKind::Aircraft => "aircraft",
+    }
+  }
+
+  /// `location` içinde görünen ad; sitenin `data.name` alanı bunu kullanır.
+  pub fn display_name(self) -> &'static str {
+    match self {
+      StructureKind::Storage => "Storage Depot",
+      StructureKind::Seaport => "Seaport",
+      StructureKind::Aircraft => "Aircraft Depot",
+    }
+  }
 }
 
 const PINNED_TOOLTIPS: &[u8] = b"PinnedMapToolTipsC";
@@ -120,18 +152,21 @@ fn collect_tooltips(tooltip: &Props, out: &mut Vec<Stockpile>) {
 
             let items = extract_items(info);
 
-            let location = format!("{region} - {structure_type} - {tag}");
+            let location = format!("{region} - {} - {tag}", structure_type.display_name());
 
             match out.iter_mut().find(|s| s.location == location) {
                 Some(existing) => {
                     if !items.is_empty() || existing.items.is_empty() {
                         existing.items = items;
                         existing.region = region.clone();
+                        existing.subregion = structure_type.as_str().to_string();
                     }
                 }
                 None => out.push(Stockpile {
                     location,
                     region: region.clone(),
+                    subregion: structure_type.as_str().to_string(),
+                    tag: tag.clone(),
                     items,
                 }),
             }
@@ -139,27 +174,27 @@ fn collect_tooltips(tooltip: &Props, out: &mut Vec<Stockpile>) {
     }
 }
 
-fn detect_structure_type(initial: Option<&PropValue>) -> &'static str {
+fn detect_structure_type(initial: Option<&PropValue>) -> StructureKind {
     let Some(structures) = initial
-        .and_then(|d| d.field("StockpileInfo"))
-        .and_then(|i| i.field("Structures"))
+      .and_then(|d| d.field("StockpileInfo"))
+      .and_then(|i| i.field("Structures"))
     else {
-        return "Storage Depot";
+      return StructureKind::Storage;
     };
 
     let has = |target: &str| {
-        structures
-            .as_array()
-            .iter()
-            .any(|s| s.field("CodeName").map(|c| c.as_str()) == Some(target))
+      structures
+        .as_array()
+        .iter()
+        .any(|s| s.field("CodeName").map(|c| c.as_str()) == Some(target))
     };
 
     if has("Seaport") {
-        "Seaport"
+      StructureKind::Seaport
     } else if has("AircraftDepot") {
-        "Aircraft Depot"
+      StructureKind::Aircraft
     } else {
-        "Storage Depot"
+      StructureKind::Storage
     }
 }
 

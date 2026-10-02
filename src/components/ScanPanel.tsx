@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { FolderSearch, Loader2, Radar } from 'lucide-react'
 import { formatMb } from '../lib/db'
 import type { SaveFileInfo } from '../types'
+import { useLanguage } from './LanguageProvider'
 
 interface Props {
   files: SaveFileInfo[]
@@ -11,6 +12,7 @@ interface Props {
 }
 
 export function ScanPanel({ files, busy, onDetect, onScan }: Props) {
+  const { t } = useLanguage()
   const [expanded, setExpanded] = useState(false)
 
   const totalSize = files.reduce((sum, f) => sum + f.size, 0)
@@ -19,17 +21,17 @@ export function ScanPanel({ files, busy, onDetect, onScan }: Props) {
   return (
     <section className="panel head-in p-4">
       <header className="flex items-center justify-between">
-        <h2 className="label">Save dosyaları</h2>
+        <h2 className="label">{t('save_files')}</h2>
         {files.length > 0 && (
           <span className="num text-[11px] text-[var(--text-dim)]">
-            {files.length} dosya · {formatMb(totalSize)}
+            {files.length} · {formatMb(totalSize)}
           </span>
         )}
       </header>
 
       {files.length === 0 ? (
         <p className="mt-3 rounded-[var(--radius)] border border-dashed border-[var(--border)] px-3 py-6 text-center text-[12px] text-[var(--text-dim)]">
-          Henüz aranmadı.
+          {t('not_searched')}
         </p>
       ) : (
         <>
@@ -57,7 +59,9 @@ export function ScanPanel({ files, busy, onDetect, onScan }: Props) {
               onClick={() => setExpanded((v) => !v)}
               className="btn-ghost mt-1"
             >
-              {expanded ? 'Daha az göster' : `+${files.length - 3} dosya daha`}
+              {expanded
+                ? t('show_less')
+                : t('show_more_files', { count: files.length - 3 })}
             </button>
           )}
         </>
@@ -71,7 +75,7 @@ export function ScanPanel({ files, busy, onDetect, onScan }: Props) {
           className="btn-secondary flex-1"
         >
           {busy ? <Loader2 size={14} className="spin" /> : <FolderSearch size={14} />}
-          Otomatik Bul
+          {t('detect')}
         </button>
 
         <button
@@ -81,7 +85,7 @@ export function ScanPanel({ files, busy, onDetect, onScan }: Props) {
           className="btn-primary flex-1"
         >
           {busy ? <Loader2 size={14} className="spin" /> : <Radar size={14} />}
-          Tara ve İçe Aktar
+          {t('scan_and_import')}
         </button>
       </div>
     </section>

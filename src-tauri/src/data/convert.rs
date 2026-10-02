@@ -16,6 +16,10 @@ pub struct ScanOutcome {
 pub struct ConvertedDepot {
   pub location: String,
   pub region: String,
+  /// "Storage Depot" / "Seaport" / "Aircraft Depot"
+  pub subregion: String,
+  /// Oyun etiketi: "VELI-ASH-C".
+  pub tag: String,
   /// Görünen item adı -> adet + kategori.
   pub current: BTreeMap<String, ItemEntryRecord>,
 }
@@ -57,10 +61,12 @@ pub fn stockpiles_to_depots(
         }
 
         outcome.depots.push(ConvertedDepot {
-            location: stockpile.location.clone(),
-            region: stockpile.region.clone(),
-            current,
-        });
+                  location: stockpile.location.clone(),
+                  region: stockpile.region.clone(),
+                  subregion: stockpile.subregion.clone(),
+                  tag: stockpile.tag.clone(),
+                  current,
+                });
     }
 
     outcome.unresolved = unresolved;

@@ -20,7 +20,31 @@ export interface DepotOut {
   /** "Ash Fields - Seaport - VELI-ASH-C" */
   location: string
   region: string
+  /** "Storage Depot" / "Seaport" / "Aircraft Depot" */
+  subregion: string
+  /** Oyun etiketi: "VELI-ASH-C". `location` bu değer + bölge + türden üretilir. */
+  tag: string
   items: ItemOut[]
+}
+
+/** Bölge başına okunan depolar, alt bölge türüne göre gruplanmış. */
+export interface RegionGroup {
+  region: string
+  /** alt bölge türü -> o türdeki depolar */
+  subregions: SubregionGroup[]
+}
+
+export interface SubregionGroup {
+  subregion: string
+  depots: DepotTag[]
+}
+
+/** Panelde gösterilen kısa depo etiketi. */
+export interface DepotTag {
+  /** "VELI-ASH-C" */
+  tag: string
+  location: string
+  itemCount: number
 }
 
 export interface UnresolvedOut {
@@ -50,6 +74,20 @@ export interface DepotRecord {
   townName: string | null
   subregion: string | null
   depotType: string | null
+  /**
+   * Onay durumu. `false` = entegrasyon bekliyor, subay onayı gerekli.
+   * `true` = entegre, sitede görünür.
+   *
+   * Sitenin `dbService.ts`'i bu alanı yoksa `true` varsayıyor; bu yüzden
+   * her kayıtta açıkça yazılmalı, yoksa depo doğrudan onaylı sayılır.
+   */
+  isIntegrated: boolean
+  /** Subayın girdiği depo şifresi. Sadece entegrasyon sonrası dolar ve
+   *  yeniden taramada korunur; yeni depoda `null` kalır. */
+  accessCode?: string | null
+  isCodePublic?: boolean
+  /** Güncelleme yapan kullanıcı adı. Panelde "kim taradı" bilgisidir. */
+  lastUpdatedBy?: string | null
 }
 
 export type LogKind = 'info' | 'ok' | 'warn' | 'error'
@@ -61,10 +99,13 @@ export interface LogLine {
 }
 
 export interface ScanSummary {
+  /** Okunan MapData parçası sayısı. */
   shards: number
   depots: number
   varieties: number
   unresolved: UnresolvedOut[]
   written: number
   notWritten: boolean
+  /** Bölge -> alt bölge -> depo sayısı. */
+  regions: RegionGroup[]
 }

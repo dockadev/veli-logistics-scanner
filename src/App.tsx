@@ -5,20 +5,66 @@ import { Login } from './components/Login'
 import { LogPanel } from './components/LogPanel'
 import { ScanPanel } from './components/ScanPanel'
 import { SummaryPanel } from './components/SummaryPanel'
+import { useLanguage } from './components/LanguageProvider'
+import { LanguageSwitcher } from './components/LanguageSwitcher'
 import {
+  ApprovalError,
+  checkApproval,
   formatMb,
   nowIso,
   pruneHistory,
-  recordHistory,
   timeOfDay,
   toDepotRecord,
   writeDepots,
 } from './lib/db'
 import { restoreSession, signOut, usernameFromUser } from './lib/auth'
 import { isSupabaseConfigured, supabase } from './lib/supabase'
-import type { DepotOut, LogKind, LogLine, ParseResult, SaveFileInfo, ScanSummary } from './types'
+import { APP_VERSION } from './lib/version'
+import type { DepotOut, LogKind, LogLine, ParseResult, RegionGroup, SaveFileInfo, ScanSummary } from './types'
+
+/** `ApprovalError.code` -> günlük mesajı. */
+const APPROVAL_LOG_KEYS = {
+  not_approved: 'approval_not_approved',
+  unverifiable: 'approval_unverifiable',
+} as const
+
+/**
+ * Depoları bölge -> alt bölge türü -> depo etiketi şeklinde gruplar.
+ *
+ * Bölgeler ve alt bölgeler alfabetik sıralanır ki liste okunabilir olsun.
+ */
+function groupByRegion(depots: DepotOut[]): RegionGroup[] {
+  const regions = new Map<string, Map<string, DepotOut[]>>()
+
+  for (const depot of depots) {
+    const subs = regions.get(depot.region) ?? new Map<string, DepotOut[]>()
+    const list = subs.get(depot.subregion) ?? []
+    list.push(depot)
+    subs.set(depot.subregion, list)
+    regions.set(depot.region, subs)
+  }
+
+  return [...regions.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([region, subs]) => ({
+      region,
+      subregions: [...subs.entries()]
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([subregion, list]) => ({
+          subregion,
+          depots: list
+            .map((depot) => ({
+              tag: depot.tag,
+              location: depot.location,
+              itemCount: depot.items.length,
+            }))
+            .sort((a, b) => a.tag.localeCompare(b.tag)),
+        })),
+    }))
+}
 
 export default function App() {
+  const { t } = useLanguage()
   const [user, setUser] = useState<User | null>(null)
   const [ready, setReady] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -26,11 +72,14 @@ export default function App() {
   const [log, setLog] = useState<LogLine[]>([])
   const [summary, setSummary] = useState<ScanSummary | null>(null)
 
-  const addLog = useCallback((message: string, kind: LogKind = 'info') => {
-    setLog((prev) => [...prev.slice(-300), { time: timeOfDay(), kind, message }])
-  }, [])
+  const addLog = useCallback(
+    (message: string, kind: LogKind = 'info') => {
+      setLog((prev) => [...prev.slice(-300), { time: timeOfDay(), kind, message }])
+    },
+    [],
+  )
 
-  // Açılışta var olan oturumu geri yükle.
+  // Açılışta var olan oturumu geri yükle ve onay durumunu doğrula.
   useEffect(() => {
     let cancelled = false
 
@@ -41,10 +90,26 @@ export default function App() {
       }
       const { user: restored } = await restoreSession(supabase)
       if (cancelled) return
-      if (restored) {
-        setUser(restored)
-        addLog(`Oturum geri yüklendi: ${usernameFromUser(restored)}`, 'ok')
+      if (!restored) {
+        setReady(true)
+        return
       }
+
+      // Oturum onay anlamına gelmez. `profiles.status` sunucudan okunur;
+      // onaysız veya doğrulanamayan kullanıcı içeriye alınmaz.
+      const { approved, error } = await checkApproval()
+      if (cancelled) return
+
+      if (!approved) {
+        await supabase.auth.signOut().catch(() => {})
+        if (cancelled) return
+        setReady(true)
+        addLog(error ? t(APPROVAL_LOG_KEYS[error.code]) : t('approval_not_approved'), 'warn')
+        return
+      }
+
+      setUser(restored)
+      addLog(t('log_session_restored', { username: usernameFromUser(restored) }), 'ok')
       setReady(true)
     }
 
@@ -52,21 +117,21 @@ export default function App() {
     return () => {
       cancelled = true
     }
-  }, [addLog])
+  }, [addLog, t])
 
   async function handleDetect() {
     setBusy(true)
-    addLog('Save dosyaları aranıyor…')
+    addLog(t('log_searching'))
 
     try {
       const found = await invoke<SaveFileInfo[]>('find_save_files')
       setFiles(found)
 
       if (found.length === 0) {
-        addLog('Dizinde hiç .sav dosyası yok.', 'warn')
+        addLog(t('log_no_save_files'), 'warn')
       } else {
         const size = found.reduce((sum, f) => sum + f.size, 0)
-        addLog(`${found.length} save dosyası bulundu (${formatMb(size)}).`, 'ok')
+        addLog(t('log_files_found', { count: found.length, size: formatMb(size) }), 'ok')
       }
     } catch (error) {
       addLog(String(error), 'error')
@@ -122,34 +187,52 @@ export default function App() {
       }
 
       if (shards === 0) {
-        addLog('Hiçbir save dosyası okunamadı.', 'error')
+        addLog(t('log_no_save_readable'), 'error')
         return
       }
 
       const depots = [...merged.values()]
-      addLog(`${shards} shard okundu, ${depots.length} depo, ${varieties} item çeşidi.`, 'ok')
+      const regions = groupByRegion(depots)
+
+      addLog(
+        t('log_scan_done', {
+          shards,
+          depots: depots.length,
+          regions: regions.length,
+          varieties,
+        }),
+        'ok',
+      )
 
       if (depots.length === 0) {
-        addLog(
-          'Foxhole harita verisini sunucudan indirir; yerel save yalnızca haritada ' +
-            'SABİTLEDİĞİN depoları içerir. Oyunda bir depoyu sabitleyip tekrar deneyin.',
-          'warn',
-        )
+        addLog(t('log_no_depots'), 'warn')
       }
 
       let written = 0
       if (supabase && user) {
         const records = depots.map((d) => toDepotRecord(d, scannedAt))
-        written = await writeDepots(records, user.id)
-        await recordHistory(records, user.id)
-        await pruneHistory()
-        addLog(`${written} depo veritabanına yazıldı.`, 'ok')
+        try {
+          const result = await writeDepots(records, user.id, usernameFromUser(user))
+          await pruneHistory()
+
+          if (result.staged > 0) {
+            addLog(t('log_depots_staged', { count: result.staged }), 'ok')
+          }
+          if (result.updated > 0) {
+            addLog(t('log_depots_updated', { count: result.updated }), 'ok')
+          }
+
+          written = result.total
+        } catch (error) {
+          const key = error instanceof ApprovalError ? error.code : null
+          addLog(key ? t(APPROVAL_LOG_KEYS[key]) : String(error), 'error')
+        }
       } else {
-        addLog('Oturum olmadığı için veritabanına yazılmadı.', 'warn')
+        addLog(t('log_not_written'), 'warn')
       }
 
       if (unresolved.size > 0) {
-        addLog(`${unresolved.size} codename çözümlenemedi.`, 'warn')
+        addLog(t('log_unresolved', { count: unresolved.size }), 'warn')
       }
 
       setSummary({
@@ -159,6 +242,7 @@ export default function App() {
         unresolved: [...unresolved].map(([codename, qty]) => ({ codename, qty })),
         written,
         notWritten: !(supabase && user),
+        regions,
       })
     } catch (error) {
       addLog(String(error), 'error')
@@ -172,13 +256,13 @@ export default function App() {
     setUser(null)
     setFiles([])
     setSummary(null)
-    addLog('Oturum kapatıldı.', 'info')
+    addLog(t('log_signed_out'), 'info')
   }
 
   if (!ready) {
     return (
       <div className="grid min-h-screen place-items-center">
-        <span className="text-[12px] text-[var(--text-dim)]">Yükleniyor…</span>
+        <span className="text-[12px] text-[var(--text-dim)]">{t('loading')}</span>
       </div>
     )
   }
@@ -187,11 +271,8 @@ export default function App() {
     return (
       <div className="grid min-h-screen place-items-center px-6">
         <div className="panel max-w-[420px] p-5">
-          <h1 className="text-[18px]">Yapılandırma eksik</h1>
-          <p className="notice notice-danger mt-3">
-            VITE_SUPABASE_URL ve VITE_SUPABASE_ANON_KEY tanımlı değil. Proje kökündeki{' '}
-            <span className="mono">.env</span> dosyasını kontrol edin.
-          </p>
+          <h1 className="text-[18px]">{t('config_missing_title')}</h1>
+          <p className="notice notice-danger mt-3">{t('config_missing_desc')}</p>
         </div>
       </div>
     )
@@ -211,17 +292,15 @@ export default function App() {
   return (
     <div className="flex h-screen flex-col gap-3 p-4">
       <header className="panel flex items-center justify-between px-4 py-2.5">
-        <div className="flex items-center gap-2.5">
-          <span className="brand-badge">VELI</span>
-          <span className="text-[14px] text-[var(--text)]">Logistics Tarayıcı</span>
-        </div>
+        <span className="text-[14px] text-[var(--text)]">{t('app_title')}</span>
 
         <div className="flex items-center gap-3">
+          <LanguageSwitcher compact />
           <span className="mono text-[12px] text-[var(--text-muted)]">
             {usernameFromUser(user)}
           </span>
           <button type="button" onClick={handleSignOut} className="btn-ghost">
-            Çıkış
+            {t('sign_out')}
           </button>
         </div>
       </header>
@@ -231,6 +310,13 @@ export default function App() {
       {summary && <SummaryPanel summary={summary} />}
 
       <LogPanel lines={log} />
+
+      {/* Sürüm bilgisi — hata bildirimlerinde kullanılabilmesi için. */}
+      <footer className="shrink-0 text-right">
+        <span className="mono text-[10px] text-[var(--text-dim)] opacity-60">
+          v{APP_VERSION}
+        </span>
+      </footer>
     </div>
   )
 }

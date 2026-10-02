@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import type { LogLine } from '../types'
+import { useLanguage } from './LanguageProvider'
 
 const TONE: Record<LogLine['kind'], string> = {
   info: 'text-[var(--text-dim)]',
@@ -9,6 +10,7 @@ const TONE: Record<LogLine['kind'], string> = {
 }
 
 export function LogPanel({ lines }: { lines: LogLine[] }) {
+  const { t } = useLanguage()
   const bottomRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -17,11 +19,11 @@ export function LogPanel({ lines }: { lines: LogLine[] }) {
 
   return (
     <section className="panel head-in flex min-h-0 flex-1 flex-col p-4">
-      <h2 className="label">Kayıt</h2>
+      <h2 className="label">{t('log_title')}</h2>
 
       <div className="mt-2 min-h-0 flex-1 overflow-y-auto">
         {lines.length === 0 ? (
-          <p className="text-[12px] text-[var(--text-dim)]">Henüz işlem yok.</p>
+          <p className="text-[12px] text-[var(--text-dim)]">{t('log_empty')}</p>
         ) : (
           <ul className="mono grid gap-0.5">
             {lines.map((line, i) => (

@@ -1,5 +1,5 @@
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 
 #[derive(Debug)]
@@ -28,6 +28,20 @@ pub fn save_dir() -> Option<PathBuf> {
   Some(PathBuf::from(local).join("Foxhole").join("Saved").join("SaveGames"))
 }
 
+/// `UserData.sav` gibi harita verisi içermeyen dosyaları eler.
+///
+/// Oyun ayrıca `UserData.sav` yazar; bu dosya harita/depo bilgisi tutmaz,
+/// yalnızca oyuncu tercihlerini saklar. GVAS imzası taşımadığı için parse
+/// sırasında hata üretir — kullanıcıya anlamsız bir uyarı göstermemek adına
+/// taramadan tamamen çıkarılır.
+fn is_ignored(path: &Path) -> bool {
+  path
+    .file_name()
+    .and_then(|n| n.to_str())
+    .map(|name| name.eq_ignore_ascii_case("UserData.sav"))
+    .unwrap_or(false)
+}
+
 /// Dizindeki tüm `.sav` dosyalarını, en yeni yazılan önce gelecek şekilde döndürür.
 ///
 /// Foxhole haritayı birden çok parçaya bölerek yazar
@@ -52,6 +66,9 @@ pub fn find_save_files() -> Result<Vec<SaveFile>, ShardError> {
   for entry in entries.flatten() {
     let path = entry.path();
     if path.extension().and_then(|e| e.to_str()) != Some("sav") {
+      continue;
+    }
+    if is_ignored(&path) {
       continue;
     }
     let Ok(meta) = entry.metadata() else { continue };
