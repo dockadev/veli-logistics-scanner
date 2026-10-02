@@ -1,4 +1,4 @@
-# VELI Logistics Scanner
+# Veli Logistics Tracker
 
 A desktop app that reads Foxhole game save files and imports depot inventories
 into the VELI logistics dashboard.
@@ -77,9 +77,14 @@ produced; the exe is downloaded and run directly.
 
 ## GitHub Actions
 
-Pushing a `v*` tag triggers CI: tests run, the exe is built and uploaded to
+Every push to `master` runs the tests (Rust parser tests plus a frontend
+type-check and build). Pushing a `v*` tag builds the exe and uploads it to
 the [Releases](https://github.com/dockadev/veli-logistics-scanner/releases)
 page. Supabase values come from Actions secrets.
+
+Tests are deliberately kept out of the tag job: running them there would
+compile the ~300-crate Tauri dependency tree twice, once for `cargo test`
+and again for the release build.
 
 ## Architecture
 
